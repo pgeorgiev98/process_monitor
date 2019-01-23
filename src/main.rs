@@ -1,6 +1,7 @@
 use std::fs::File;
 use std::fs::read_dir;
 use std::io::prelude::*;
+use std::io::{Error, ErrorKind};
 use std::{thread, time};
 
 struct IoStats {
@@ -13,43 +14,39 @@ struct IoStats {
 struct Process {
     proc_path: String,
     process_id: i32,
-    io_stats: Result<IoStats, &'static str>
+    io_stats: Result<IoStats, Error>,
 }
 
-fn get_io_stats(path: &String) -> Result<IoStats, &'static str> {
-    let mut file = match File::open(path) {
-        Err(_) => return Err("Failed to open io file"),
-        Ok(file) => file,
-    };
+fn get_io_stats(path: &String) -> Result<IoStats, Error> {
+    let mut file = File::open(path)?;
 
     let mut contents = String::new();
-    if let Err(_) = file.read_to_string(&mut contents) {
-        return Err("Failed to read from io file");
-    }
+    file.read_to_string(&mut contents)?;
 
     let mut read_bytes : Option<u64> = None;
     let mut write_bytes : Option<u64> = None;
+    let file_format_error = Err(Error::new(ErrorKind::Other, "Invalid io file format"));
     for line in contents.lines() {
         if line.starts_with("read_bytes: ") {
             if read_bytes != None {
-                return Err("Invalid io file format");
+                return file_format_error;
             }
             if let Some(bytes) = line.get("read_bytes: ".len()..line.len()) {
                 read_bytes = match bytes.parse::<u64>() {
                     Ok(b) => Some(b),
-                    Err(_) => return Err("Invalid io file format"),
+                    Err(_) => return file_format_error,
                 }
             } else {
                 unreachable!()
             }
         } else if line.starts_with("write_bytes: ") {
             if write_bytes != None {
-                return Err("Invalid io file format");
+                return file_format_error;
             }
             if let Some(bytes) = line.get("write_bytes: ".len()..line.len()) {
                 write_bytes = match bytes.parse::<u64>() {
                     Ok(b) => Some(b),
-                    Err(_) => return Err("Invalid io file format"),
+                    Err(_) => return file_format_error,
                 }
             } else {
                 unreachable!()
@@ -65,7 +62,7 @@ fn get_io_stats(path: &String) -> Result<IoStats, &'static str> {
             write_bytes: 0,
         })
     } else {
-        Err("Invalid io file format")
+        file_format_error
     }
 }
 
@@ -127,7 +124,7 @@ fn main() {
                      process.proc_path, process.process_id,
                      match &process.io_stats {
                          Ok(s) => format!("r: {}, w: {}", s.read_bytes, s.write_bytes),
-                         Err(e) => String::from(*e),
+                         Err(e) => e.to_string(),
                      });
         }
     }
