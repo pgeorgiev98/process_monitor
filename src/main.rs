@@ -9,8 +9,12 @@ fn main() {
         thread::sleep(time::Duration::from_millis(1000));
         println!("");
         for process in &processes {
-            println!("{} {}",
+            println!("{} {} {}",
                      process.pid,
+                     match &process.name {
+                         Ok(n) => n.clone(),
+                         Err(_) => String::from("-"),
+                     },
                      match &process.io_stats {
                          Ok(s) => format!("r: {}, w: {}", s.read_bytes, s.write_bytes),
                          Err(e) => e.to_string(),

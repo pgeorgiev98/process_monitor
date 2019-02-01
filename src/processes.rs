@@ -12,6 +12,7 @@ pub struct IoStats {
 
 pub struct Process {
     pub pid: u64,
+    pub name: Result<String, Error>,
     pub io_stats: Result<IoStats, Error>,
 }
 
@@ -32,7 +33,7 @@ pub fn refresh_processes(processes: Vec<Process>) -> Vec<Process> {
                             if let Some(file_name) = file_name.to_str() {
                                 if let Ok(pid) = file_name.parse::<u64>() {
                                     // TODO: Actually add it even though we can't get the stats
-                                    let mut io_stats = get_io_stats(&(path.clone() + "/io"));
+                                    let mut io_stats = get_io_stats(&path);
                                     if let Ok(io_stats) = &mut io_stats {
                                         for p in &processes {
                                             if p.pid == pid {
@@ -47,6 +48,7 @@ pub fn refresh_processes(processes: Vec<Process>) -> Vec<Process> {
                                     }
                                     new_processes.push(Process {
                                         pid: pid,
+                                        name: get_process_name(&path),
                                         io_stats: io_stats,
                                     });
                                 }
@@ -61,8 +63,8 @@ pub fn refresh_processes(processes: Vec<Process>) -> Vec<Process> {
     new_processes
 }
 
-fn get_io_stats(path: &String) -> Result<IoStats, Error> {
-    let mut file = File::open(path)?;
+fn get_io_stats(proc_path: &String) -> Result<IoStats, Error> {
+    let mut file = File::open(proc_path.clone() + "/io")?;
 
     let mut contents = String::new();
     file.read_to_string(&mut contents)?;
@@ -108,4 +110,11 @@ fn get_io_stats(path: &String) -> Result<IoStats, Error> {
     } else {
         file_format_error
     }
+}
+
+fn get_process_name(proc_path: &String) -> Result<String, Error> {
+    let mut file = File::open(proc_path.clone() + "/comm")?;
+    let mut contents = String::new();
+    file.read_to_string(&mut contents)?;
+    Ok(String::from(contents.trim()))
 }
