@@ -11,7 +11,6 @@ pub struct IoStats {
 }
 
 pub struct Process {
-    pub proc_path: String,
     pub process_id: i32,
     pub io_stats: Result<IoStats, Error>,
 }
@@ -47,7 +46,6 @@ pub fn refresh_processes(processes: Vec<Process>) -> Vec<Process> {
                                         }
                                     }
                                     new_processes.push(Process {
-                                        proc_path: path,
                                         process_id: pid,
                                         io_stats: io_stats,
                                     });
