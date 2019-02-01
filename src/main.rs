@@ -10,7 +10,7 @@ fn main() {
         println!("");
         for process in &processes {
             println!("{} {}",
-                     process.process_id,
+                     process.pid,
                      match &process.io_stats {
                          Ok(s) => format!("r: {}, w: {}", s.read_bytes, s.write_bytes),
                          Err(e) => e.to_string(),

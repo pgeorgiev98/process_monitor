@@ -11,7 +11,7 @@ pub struct IoStats {
 }
 
 pub struct Process {
-    pub process_id: i32,
+    pub pid: u64,
     pub io_stats: Result<IoStats, Error>,
 }
 
@@ -30,12 +30,12 @@ pub fn refresh_processes(processes: Vec<Process>) -> Vec<Process> {
                     if let Ok(path) = entry.path().into_os_string().into_string() {
                         if let Some(file_name) = entry.path().file_name() {
                             if let Some(file_name) = file_name.to_str() {
-                                if let Ok(pid) = file_name.parse::<i32>() {
+                                if let Ok(pid) = file_name.parse::<u64>() {
                                     // TODO: Actually add it even though we can't get the stats
                                     let mut io_stats = get_io_stats(&(path.clone() + "/io"));
                                     if let Ok(io_stats) = &mut io_stats {
                                         for p in &processes {
-                                            if p.process_id == pid {
+                                            if p.pid == pid {
                                                 if let Ok(old_io_stats) = &p.io_stats {
                                                     // TODO: check time since last poll
                                                     io_stats.read_bytes = io_stats.total_read_bytes - old_io_stats.total_read_bytes;
@@ -46,7 +46,7 @@ pub fn refresh_processes(processes: Vec<Process>) -> Vec<Process> {
                                         }
                                     }
                                     new_processes.push(Process {
-                                        process_id: pid,
+                                        pid: pid,
                                         io_stats: io_stats,
                                     });
                                 }
