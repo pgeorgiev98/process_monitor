@@ -16,7 +16,7 @@ pub struct Process {
     pub io_stats: Result<IoStats, Error>,
 }
 
-pub fn refresh_processes(processes: Vec<Process>) -> Vec<Process> {
+pub fn refresh_processes(processes: &Vec<Process>) -> Vec<Process> {
     let directories = match read_dir("/proc/") {
         Ok(i) => i,
         Err(_) => return Vec::new(),
@@ -35,7 +35,7 @@ pub fn refresh_processes(processes: Vec<Process>) -> Vec<Process> {
                                     // TODO: Actually add it even though we can't get the stats
                                     let mut io_stats = get_io_stats(&path);
                                     if let Ok(io_stats) = &mut io_stats {
-                                        for p in &processes {
+                                        for p in processes {
                                             if p.pid == pid {
                                                 if let Ok(old_io_stats) = &p.io_stats {
                                                     // TODO: check time since last poll
