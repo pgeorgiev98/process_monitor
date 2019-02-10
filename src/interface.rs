@@ -26,6 +26,15 @@ struct ProcessView {
     default_background_color: (f64, f64, f64),
 }
 
+enum Column {
+    PID = 0,
+    Name = 1,
+    ReadBytes = 2,
+    WriteBytes = 3,
+    ReadBytesColor = 4,
+    WriteBytesColor = 5,
+}
+
 impl Interface {
     pub fn new() -> Result<Interface, &'static str> {
         if gtk::init().is_err() {
@@ -79,13 +88,21 @@ impl Interface {
 
 impl ProcessView {
     fn new() -> ProcessView {
-        let model = ListStore::new(&[u64::static_type(), String::static_type(), String::static_type(), String::static_type(), String::static_type(), String::static_type()]);
+        let model = ListStore::new(
+            &[
+            u64::static_type(),
+            String::static_type(),
+            String::static_type(),
+            String::static_type(),
+            String::static_type(),
+            String::static_type(),
+            ]);
         let tree = TreeView::new();
 
-        append_column(&tree, 0, "PID", None);
-        append_column(&tree, 1, "Process Name", None);
-        append_column(&tree, 2, "Read Bytes", Some(4));
-        append_column(&tree, 3, "Write Bytes", Some(5));
+        append_column(&tree, Column::PID as i32, "PID", None);
+        append_column(&tree, Column::Name as i32, "Process Name", None);
+        append_column(&tree, Column::ReadBytes as i32, "Read Bytes", Some(Column::ReadBytesColor as i32));
+        append_column(&tree, Column::WriteBytes as i32, "Write Bytes", Some(Column::WriteBytesColor as i32));
 
         tree.set_model(Some(&model));
 
@@ -167,7 +184,15 @@ impl ProcessView {
                           (write_coef *  17.0 + (1.0 - write_coef) * self.default_background_color.1 * 255.0) as i32,
                           (write_coef *  51.0 + (1.0 - write_coef) * self.default_background_color.2 * 255.0) as i32);
 
-        self.model.set(&iter, &[0, 1, 2, 3, 4, 5], &[&process.pid, &name, &read_bytes, &write_bytes, &bgr, &bgw]);
+        self.model.set(
+                &iter,
+                &[
+                    Column::PID as u32, Column::Name as u32,
+                    Column::ReadBytes as u32, Column::WriteBytes as u32,
+                    Column::ReadBytesColor as u32, Column::WriteBytesColor as u32,
+                ],
+                &[&process.pid, &name, &read_bytes, &write_bytes, &bgr, &bgw],
+            );
     }
 
     fn append_process(&self, process: &Process) -> TreeIter {
@@ -203,7 +228,15 @@ impl ProcessView {
                           (write_coef *  17.0 + (1.0 - write_coef) * self.default_background_color.1 * 255.0) as i32,
                           (write_coef *  51.0 + (1.0 - write_coef) * self.default_background_color.2 * 255.0) as i32);
 
-        self.model.insert_with_values(None, &[0, 1, 2, 3, 4, 5], &[&process.pid, &name, &read_bytes, &write_bytes, &bgr, &bgw])
+        self.model.insert_with_values(
+            None,
+            &[
+                Column::PID as u32, Column::Name as u32,
+                Column::ReadBytes as u32, Column::WriteBytes as u32,
+                Column::ReadBytesColor as u32, Column::WriteBytesColor as u32,
+            ],
+            &[&process.pid, &name, &read_bytes, &write_bytes, &bgr, &bgw]
+            )
     }
 }
 
