@@ -5,9 +5,11 @@ use gtk::prelude::*;
 use gtk::{Window, WindowType};
 use gtk::{TreeView, ListStore, TreeIter, TreeViewColumn, CellRendererText};
 use gtk::ScrolledWindow;
+use gtk::{Box, Orientation};
+use gtk::Statusbar;
 
 #[path = "processes.rs"] mod processes;
-use processes::Process;
+use processes::{ProcessesList, Process};
 
 use std::rc::Rc;
 use std::cell::RefCell;
@@ -17,7 +19,7 @@ pub struct Interface {
 }
 
 struct ProcessView {
-    processes: Vec<Process>,
+    processes: ProcessesList,
     model: ListStore,
     tree: TreeView,
     processes_in_model: Vec<(u64, TreeIter)>,
@@ -33,13 +35,19 @@ impl Interface {
         window.set_title("Process Monitor");
         window.set_default_size(640, 480);
 
+        let statusbar = Statusbar::new();
+        statusbar.push(0, "");
+
         let process_view = Rc::new(RefCell::new(ProcessView::new()));
 
         let scrolled_window = ScrolledWindow::new(None, None);
 
         scrolled_window.add(&process_view.borrow_mut().tree);
 
-        window.add(&scrolled_window);
+        let main_box = Box::new(Orientation::Vertical, 0);
+        main_box.pack_start(&scrolled_window, true, true, 0);
+        main_box.pack_start(&statusbar, false, false, 0);
+        window.add(&main_box);
         window.show_all();
 
         window.connect_delete_event(|_, _| {
@@ -52,6 +60,11 @@ impl Interface {
         let process_view_clone = process_view.clone();
         timeout_add(1000, move || {
             process_view_clone.borrow_mut().refresh();
+            statusbar.pop(0);
+            let disk_stats = &process_view_clone.borrow_mut().processes.disk_stats;
+            statusbar.push(0, format!("Read: {: >12}                Write: {: >12}",
+                                      format_bytes_per_second(disk_stats.maximum_read),
+                                      format_bytes_per_second(disk_stats.maximum_write)).as_str());
             Continue(true)
         });
 
@@ -80,7 +93,7 @@ impl ProcessView {
         }
 
         ProcessView {
-            processes: Vec::new(),
+            processes: ProcessesList::new(),
             model: model,
             tree: tree,
             processes_in_model: Vec::new(),
@@ -92,7 +105,7 @@ impl ProcessView {
 
         let mut new_processes_in_model = Vec::new();
 
-        for process in &self.processes {
+        for process in &self.processes.processes {
             if let Some((_, iter)) = self.processes_in_model.iter().find(|(pid, _)| { *pid == process.pid }) {
                 self.set_process(&iter, process);
                 new_processes_in_model.push((process.pid, iter.clone()));
