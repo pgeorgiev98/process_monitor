@@ -75,6 +75,10 @@ impl ProcessView {
 
         tree.set_model(Some(&model));
 
+        for (i, column) in tree.get_columns().iter().enumerate() {
+            column.set_sort_column_id(i as i32);
+        }
+
         ProcessView {
             processes: Vec::new(),
             model: model,
