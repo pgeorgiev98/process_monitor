@@ -31,8 +31,10 @@ enum Column {
     Name = 1,
     ReadBytes = 2,
     WriteBytes = 3,
-    ReadBytesColor = 4,
-    WriteBytesColor = 5,
+    ReadBytesRaw = 4,
+    WriteBytesRaw = 5,
+    ReadBytesColor = 6,
+    WriteBytesColor = 7,
 }
 
 impl Interface {
@@ -94,6 +96,8 @@ impl ProcessView {
             String::static_type(),
             String::static_type(),
             String::static_type(),
+            u64::static_type(),
+            u64::static_type(),
             String::static_type(),
             String::static_type(),
             ]);
@@ -106,9 +110,11 @@ impl ProcessView {
 
         tree.set_model(Some(&model));
 
-        for (i, column) in tree.get_columns().iter().enumerate() {
-            column.set_sort_column_id(i as i32);
-        }
+        let columns = tree.get_columns();
+        columns[Column::PID as usize].set_sort_column_id(Column::PID as i32);
+        columns[Column::Name as usize].set_sort_column_id(Column::Name as i32);
+        columns[Column::ReadBytes as usize].set_sort_column_id(Column::ReadBytesRaw as i32);
+        columns[Column::WriteBytes as usize].set_sort_column_id(Column::WriteBytesRaw as i32);
 
         let default_background_color = match tree.get_style_context() {
             Some(context) => {
@@ -152,8 +158,10 @@ impl ProcessView {
     }
 
     fn set_process(&self, iter: &TreeIter, process: &Process) {
-        let (read_bytes, write_bytes, read_coef, write_coef) = match &process.io_stats {
+        let (read_bytes, write_bytes, read_bytes_string, write_bytes_string, read_coef, write_coef) = match &process.io_stats {
             Ok(s) => (
+                s.read_bytes,
+                s.write_bytes,
                 format_bytes_per_second(s.read_bytes),
                 format_bytes_per_second(s.write_bytes),
                 if self.processes.disk_stats.maximum_read > 0 {
@@ -167,7 +175,7 @@ impl ProcessView {
                     0.0
                 }
             ),
-            Err(_) => (String::from("-"), String::from("-"), 0.0, 0.0),
+            Err(_) => (0, 0, String::from("-"), String::from("-"), 0.0, 0.0),
         };
         let default_name = String::from("?");
         let name = match &process.name {
@@ -185,19 +193,22 @@ impl ProcessView {
                           (write_coef *  51.0 + (1.0 - write_coef) * self.default_background_color.2 * 255.0) as i32);
 
         self.model.set(
-                &iter,
-                &[
-                    Column::PID as u32, Column::Name as u32,
-                    Column::ReadBytes as u32, Column::WriteBytes as u32,
-                    Column::ReadBytesColor as u32, Column::WriteBytesColor as u32,
-                ],
-                &[&process.pid, &name, &read_bytes, &write_bytes, &bgr, &bgw],
+            &iter,
+            &[
+                Column::PID as u32, Column::Name as u32,
+                Column::ReadBytes as u32, Column::WriteBytes as u32,
+                Column::ReadBytesRaw as u32, Column::WriteBytesRaw as u32,
+                Column::ReadBytesColor as u32, Column::WriteBytesColor as u32,
+            ],
+            &[&process.pid, &name, &read_bytes_string, &write_bytes_string, &read_bytes, &write_bytes, &bgr, &bgw],
             );
     }
 
     fn append_process(&self, process: &Process) -> TreeIter {
-        let (read_bytes, write_bytes, read_coef, write_coef) = match &process.io_stats {
+        let (read_bytes, write_bytes, read_bytes_string, write_bytes_string, read_coef, write_coef) = match &process.io_stats {
             Ok(s) => (
+                s.read_bytes,
+                s.write_bytes,
                 format_bytes_per_second(s.read_bytes),
                 format_bytes_per_second(s.write_bytes),
                 if self.processes.disk_stats.maximum_read > 0 {
@@ -211,7 +222,7 @@ impl ProcessView {
                     0.0
                 }
             ),
-            Err(_) => (String::from("-"), String::from("-"), 0.0, 0.0),
+            Err(_) => (0, 0, String::from("-"), String::from("-"), 0.0, 0.0),
         };
         let default_name = String::from("?");
         let name = match &process.name {
@@ -233,9 +244,10 @@ impl ProcessView {
             &[
                 Column::PID as u32, Column::Name as u32,
                 Column::ReadBytes as u32, Column::WriteBytes as u32,
+                Column::ReadBytesRaw as u32, Column::WriteBytesRaw as u32,
                 Column::ReadBytesColor as u32, Column::WriteBytesColor as u32,
             ],
-            &[&process.pid, &name, &read_bytes, &write_bytes, &bgr, &bgw]
+            &[&process.pid, &name, &read_bytes_string, &write_bytes_string, &read_bytes, &write_bytes, &bgr, &bgw],
             )
     }
 }
