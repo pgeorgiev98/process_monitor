@@ -112,6 +112,9 @@ impl ProcessView {
 
         tree.set_model(Some(&model));
 
+        tree.set_enable_search(true);
+        tree.set_search_column(Column::Name as i32);
+
         let columns = tree.get_columns();
         columns[Column::PID as usize].set_sort_column_id(Column::PID as i32);
         columns[Column::Name as usize].set_sort_column_id(Column::Name as i32);
