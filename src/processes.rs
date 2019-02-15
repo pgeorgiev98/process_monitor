@@ -11,7 +11,7 @@ pub struct IoStats {
 }
 
 pub struct Process {
-    pub pid: u64,
+    pub pid: i32,
     pub name: Result<String, Error>,
     pub io_stats: Result<IoStats, Error>,
 }
@@ -57,7 +57,7 @@ pub fn refresh_processes(processes_list: &ProcessesList) -> ProcessesList {
                     if let Ok(path) = entry.path().into_os_string().into_string() {
                         if let Some(file_name) = entry.path().file_name() {
                             if let Some(file_name) = file_name.to_str() {
-                                if let Ok(pid) = file_name.parse::<u64>() {
+                                if let Ok(pid) = file_name.parse::<i32>() {
                                     // TODO: Actually add it even though we can't get the stats
                                     let mut io_stats = get_io_stats(&path);
                                     if let Ok(io_stats) = &mut io_stats {

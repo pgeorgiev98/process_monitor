@@ -1,4 +1,5 @@
 extern crate gtk;
+extern crate nix;
 
 use gtk::prelude::*;
 
@@ -7,6 +8,7 @@ use gtk::{TreeView, ListStore, TreeIter, TreeViewColumn, CellRendererText};
 use gtk::ScrolledWindow;
 use gtk::{Box, Orientation};
 use gtk::Statusbar;
+use gtk::{Menu, MenuItem};
 
 #[path = "processes.rs"] mod processes;
 use processes::{ProcessesList, Process};
@@ -22,7 +24,7 @@ struct ProcessView {
     processes: ProcessesList,
     model: ListStore,
     tree: TreeView,
-    processes_in_model: Vec<(u64, TreeIter)>,
+    processes_in_model: Vec<(i32, TreeIter)>,
     default_background_color: (f64, f64, f64),
 }
 
@@ -92,7 +94,7 @@ impl ProcessView {
     fn new() -> ProcessView {
         let model = ListStore::new(
             &[
-            u64::static_type(),
+            i32::static_type(),
             String::static_type(),
             String::static_type(),
             String::static_type(),
@@ -124,12 +126,39 @@ impl ProcessView {
             None => (1.0, 1.0, 1.0),
         };
 
+        let menu_popup = Menu::new();
+
+        let menu_kill_item = MenuItem::new_with_mnemonic("_Kill");
+        menu_popup.append(&menu_kill_item);
+
+        let menu_terminate_item = MenuItem::new_with_mnemonic("_Terminate");
+        menu_popup.append(&menu_terminate_item);
+
+        menu_popup.show_all();
+
+        let tree_copy = tree.clone();
+        menu_kill_item.connect_activate(move |_| {
+            send_signal_to_selected(&tree_copy, nix::sys::signal::Signal::SIGKILL);
+        });
+        let tree_copy = tree.clone();
+        menu_terminate_item.connect_activate(move |_| {
+            send_signal_to_selected(&tree_copy, nix::sys::signal::Signal::SIGTERM);
+        });
+
+        tree.connect_button_press_event(move |_, button_event| {
+            if button_event.get_button() == 3 {
+                menu_popup.popup_at_pointer(None);
+            }
+            Inhibit(false)
+        });
+
         ProcessView {
             processes: ProcessesList::new(),
             model: model,
             tree: tree,
             processes_in_model: Vec::new(),
             default_background_color,
+
         }
     }
 
@@ -278,4 +307,20 @@ fn format_bytes_per_second(bytes: u64) -> String {
     }
 
     format!("{:.1} {}/s", b, table[i])
+}
+
+pub fn send_signal(pid: i32, signal: nix::sys::signal::Signal) -> nix::Result<()> {
+    let pid = nix::unistd::Pid::from_raw(pid);
+    nix::sys::signal::kill(pid, signal)
+}
+
+fn send_signal_to_selected(tree: &TreeView, signal: nix::sys::signal::Signal) -> nix::Result<()> {
+    let selection = tree.get_selection();
+    if let Some((model, iter)) = selection.get_selected() {
+        let pid = model.get_value(&iter, Column::PID as i32);
+        if let Some(pid) = pid.get::<i32>() {
+            return send_signal(pid, signal);
+        }
+    }
+    Ok(())
 }
