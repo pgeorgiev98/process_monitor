@@ -52,7 +52,7 @@ impl Interface {
         let statusbar = Statusbar::new();
         statusbar.push(0, "");
 
-        let process_view = Rc::new(RefCell::new(ProcessView::new()));
+        let process_view = Rc::new(RefCell::new(ProcessView::new(&window)));
 
         let scrolled_window = ScrolledWindow::new(None, None);
 
@@ -91,7 +91,7 @@ impl Interface {
 }
 
 impl ProcessView {
-    fn new() -> ProcessView {
+    fn new(window: &Window) -> ProcessView {
         let model = ListStore::new(
             &[
             i32::static_type(),
@@ -137,12 +137,28 @@ impl ProcessView {
         menu_popup.show_all();
 
         let tree_copy = tree.clone();
+        let window_copy = window.clone();
         menu_kill_item.connect_activate(move |_| {
-            send_signal_to_selected(&tree_copy, nix::sys::signal::Signal::SIGKILL);
+            if let Err(error) = send_signal_to_selected(&tree_copy, nix::sys::signal::Signal::SIGKILL) {
+                let error = format!("Failed to kill process: {}", error.to_string());
+                let dialog = gtk::MessageDialog::new(Some(&window_copy), gtk::DialogFlags::MODAL, gtk::MessageType::Info, gtk::ButtonsType::Ok, error.as_str());
+                dialog.connect_response(|dialog,_| {
+                    dialog.emit_close();
+                });
+                dialog.run();
+            }
         });
         let tree_copy = tree.clone();
+        let window_copy = window.clone();
         menu_terminate_item.connect_activate(move |_| {
-            send_signal_to_selected(&tree_copy, nix::sys::signal::Signal::SIGTERM);
+            if let Err(error) = send_signal_to_selected(&tree_copy, nix::sys::signal::Signal::SIGTERM) {
+                let error = format!("Failed to terminate process: {}", error.to_string());
+                let dialog = gtk::MessageDialog::new(Some(&window_copy), gtk::DialogFlags::MODAL, gtk::MessageType::Info, gtk::ButtonsType::Ok, error.as_str());
+                dialog.connect_response(|dialog,_| {
+                    dialog.emit_close();
+                });
+                dialog.run();
+            }
         });
 
         tree.connect_button_press_event(move |_, button_event| {
