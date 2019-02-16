@@ -50,39 +50,37 @@ pub fn refresh_processes(processes_list: &ProcessesList) -> ProcessesList {
 
     let mut new_processes = ProcessesList::new();
 
+    fn get_path_and_pid(entry: Result<std::fs::DirEntry, std::io::Error>) -> Option<(String, i32)> {
+        let entry = entry.ok()?;
+        if !entry.file_type().ok()?.is_dir() {
+            return None;
+        }
+        let path = entry.path().into_os_string().into_string().ok()?;
+        let pid = entry.path().file_name()?.to_str()?.parse::<i32>().ok()?;
+
+        Some((path, pid))
+    }
+
     for entry in directories {
-        if let Ok(entry) = entry {
-            if let Ok(file_type) = entry.file_type() {
-                if file_type.is_dir() {
-                    if let Ok(path) = entry.path().into_os_string().into_string() {
-                        if let Some(file_name) = entry.path().file_name() {
-                            if let Some(file_name) = file_name.to_str() {
-                                if let Ok(pid) = file_name.parse::<i32>() {
-                                    // TODO: Actually add it even though we can't get the stats
-                                    let mut io_stats = get_io_stats(&path);
-                                    if let Ok(io_stats) = &mut io_stats {
-                                        for p in &processes_list.processes {
-                                            if p.pid == pid {
-                                                if let Ok(old_io_stats) = &p.io_stats {
-                                                    // TODO: check time since last poll
-                                                    io_stats.read_bytes = io_stats.total_read_bytes - old_io_stats.total_read_bytes;
-                                                    io_stats.write_bytes = io_stats.total_write_bytes - old_io_stats.total_write_bytes;
-                                                }
-                                                break;
-                                            }
-                                        }
-                                    }
-                                    new_processes.processes.push(Process {
-                                        pid: pid,
-                                        name: get_process_name(&path),
-                                        io_stats: io_stats,
-                                    });
-                                }
-                            }
+        if let Some((path, pid)) = get_path_and_pid(entry) {
+            let mut io_stats = get_io_stats(&path);
+            if let Ok(io_stats) = &mut io_stats {
+                for p in &processes_list.processes {
+                    if p.pid == pid {
+                        if let Ok(old_io_stats) = &p.io_stats {
+                            // TODO: check time since last poll
+                            io_stats.read_bytes = io_stats.total_read_bytes - old_io_stats.total_read_bytes;
+                            io_stats.write_bytes = io_stats.total_write_bytes - old_io_stats.total_write_bytes;
                         }
+                        break;
                     }
                 }
             }
+            new_processes.processes.push(Process {
+                pid: pid,
+                name: get_process_name(&path),
+                io_stats: io_stats,
+            });
         }
     }
 
