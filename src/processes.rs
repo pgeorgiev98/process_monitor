@@ -77,9 +77,9 @@ pub fn refresh_processes(processes_list: &ProcessesList) -> ProcessesList {
                 }
             }
             new_processes.processes.push(Process {
-                pid: pid,
+                pid,
                 name: get_process_name(&path),
-                io_stats: io_stats,
+                io_stats
             });
         }
     }
@@ -111,8 +111,8 @@ pub fn refresh_processes(processes_list: &ProcessesList) -> ProcessesList {
     new_processes
 }
 
-fn get_io_stats(proc_path: &String) -> Result<IoStats, Error> {
-    let mut file = File::open(proc_path.clone() + "/io")?;
+fn get_io_stats(proc_path: &str) -> Result<IoStats, Error> {
+    let mut file = File::open(proc_path.to_string() + "/io")?;
 
     let mut contents = String::new();
     file.read_to_string(&mut contents)?;
@@ -160,8 +160,8 @@ fn get_io_stats(proc_path: &String) -> Result<IoStats, Error> {
     }
 }
 
-fn get_process_name(proc_path: &String) -> Result<String, Error> {
-    let mut file = File::open(proc_path.clone() + "/comm")?;
+fn get_process_name(proc_path: &str) -> Result<String, Error> {
+    let mut file = File::open(proc_path.to_string() + "/comm")?;
     let mut contents = String::new();
     file.read_to_string(&mut contents)?;
     Ok(String::from(contents.trim()))
