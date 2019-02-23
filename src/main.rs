@@ -1,5 +1,3 @@
-//use std::{thread, time};
-
 mod interface;
 use interface::Interface;
 
