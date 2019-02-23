@@ -179,7 +179,7 @@ impl ProcessView {
     }
 
     fn refresh(&mut self) {
-        self.processes = processes::refresh_processes(&&self.processes);
+        self.processes = processes::refresh_processes(&self.processes);
 
         let mut new_processes_in_model = Vec::new();
 
