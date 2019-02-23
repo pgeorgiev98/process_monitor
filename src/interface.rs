@@ -16,9 +16,7 @@ use processes::{ProcessesList, Process};
 use std::rc::Rc;
 use std::cell::RefCell;
 
-pub struct Interface {
-    process_view: Rc<RefCell<ProcessView>>,
-}
+pub struct Interface {}
 
 struct ProcessView {
     processes: ProcessesList,
@@ -82,7 +80,7 @@ impl Interface {
             Continue(true)
         });
 
-        Ok(Interface { process_view })
+        Ok(Interface {})
     }
 
     pub fn exec() {
@@ -173,11 +171,10 @@ impl ProcessView {
 
         ProcessView {
             processes: ProcessesList::new(),
-            model: model,
-            tree: tree,
+            model,
+            tree,
             processes_in_model: Vec::new(),
             default_background_color,
-
         }
     }
 
@@ -197,7 +194,9 @@ impl ProcessView {
         }
 
         for p in &self.processes_in_model {
-            if new_processes_in_model.iter().find(|(pid, _)| { *pid == p.0 }) == None {
+            let is_current_process = |(pid, _): &&(i32, _)| *pid == p.0;
+
+            if new_processes_in_model.iter().find(is_current_process) == None {
                 self.model.remove(&p.1);
             }
         }
